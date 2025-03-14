@@ -88,7 +88,7 @@ export function possibleCoordinates() {
       }
       break;
 
-    case PiecesEnum.horse:
+    case PiecesEnum.knight:
       for (const [dx, dy] of [
         [2, 1],
         [2, -1],

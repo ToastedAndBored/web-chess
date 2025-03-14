@@ -1,11 +1,29 @@
 <template>
+  <div>
+    <img
+      v-if="!capturedWhite.length"
+      :src="`/chess/pawn_white.svg`"
+      style="visibility: hidden"
+    />
+    <img
+      v-for="(piece, index) in capturedWhite"
+      :src="`/chess/${PiecesEnum[piece.piece]}_white.svg`"
+      :key="`capturedBlack-${index}`"
+    />
+  </div>
   <table class="chessboard">
     <tbody>
       <tr v-for="(row, rowIndex) in 8" :key="`row-${rowIndex}`">
         <td
           v-for="(col, colIndex) in 8"
           :key="`col-${colIndex}`"
-          :class="(rowIndex + colIndex) % 2 === 0 ? 'white' : 'black'"
+          :class="{
+            white: (rowIndex + colIndex) % 2 === 0,
+            black: (rowIndex + colIndex) % 2 !== 0,
+            highlightCoordinates: pieceTurnOpt.some(
+              (item) => item.row === rowIndex && item.col === colIndex
+            ),
+          }"
           @drop="onDrop($event, rowIndex, colIndex)"
           @dragover.prevent
         >
@@ -20,10 +38,34 @@
       </tr>
     </tbody>
   </table>
+  <div>
+    <img
+      v-for="(piece, index) in capturedBlack"
+      :src="`/chess/${PiecesEnum[piece.piece]}_black.svg`"
+      :key="`capturedBlack-${index}`"
+    />
+  </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
+import { useChessRulesStore } from "@/store/chessRules";
+import { possibleCoordinates } from "@/utils/pieceCoordinates";
+import { storeToRefs } from "pinia";
+import { ICoordinate } from "@/types/chess";
+import { makeMove } from "@/utils/turn";
+import { IPiece } from "@/types/chess";
+import { PiecesEnum } from "@/types/chess";
+
+const chessRulesStore = useChessRulesStore();
+const {
+  currentPiece,
+  turnOrder,
+  boardArr,
+  pieceTurnOpt,
+  capturedBlack,
+  capturedWhite,
+} = storeToRefs(chessRulesStore);
 
 const pieces = ref([
   [
@@ -69,13 +111,13 @@ const pieces = ref([
   ],
 ]);
 
-const pieceSvgs = reactive({});
-let draggingPiece = null;
-let startRow = null;
-let startCol = null;
+const pieceSvgs = reactive<any>({});
+let draggingPiece: string | null = null;
+let startRow: number | null = null;
+let startCol: number | null = null;
 
 // Fetch and store SVGs
-const fetchSvg = async (piece) => {
+const fetchSvg = async (piece: string) => {
   if (!piece) return "";
   if (pieceSvgs[piece]) return pieceSvgs[piece];
 
@@ -120,10 +162,22 @@ onMounted(() => {
 });
 
 // Drag start
-const onDragStart = (event, row, col) => {
+const onDragStart = (event: any, row: number, col: number) => {
   draggingPiece = pieces.value[row][col];
   startRow = row;
   startCol = col;
+  // if (draggingPiece) {
+  //   console.log("000000:", draggingPiece);
+  //   const pieceData = draggingPiece.split("_");
+  //   chessRulesStore.setCurrentPiece({
+  //     row,
+  //     col,
+  //     color: pieceData[1],
+  //     piece: Object.entries(PiecesEnum).find(
+  //       ([item, _value]) => item == pieceData[0]
+  //     )?.[1] as PiecesEnum,
+  //   });
+  // }
 
   // Create a drag image
   const dragImg = document.createElement("img");
@@ -136,11 +190,33 @@ const onDragStart = (event, row, col) => {
   event.dataTransfer.effectAllowed = "move";
 
   setTimeout(() => document.body.removeChild(dragImg), 0);
+
+  chessRulesStore.clearPieceTurnOpt();
+  console.log("AAAA:", boardArr.value[row][col]);
+  chessRulesStore.setCurrentPiece({
+    ...boardArr.value[row][col],
+    row,
+    col,
+  } as IPiece);
+  possibleCoordinates();
+  console.log(pieceTurnOpt);
 };
 
 // Drop
-const onDrop = (event, row, col) => {
+const onDrop = (event: any, row: number, col: number) => {
   if (draggingPiece) {
+    const result = makeMove({ row, col });
+    if (!result.isValid) {
+      return;
+    }
+    if (result.capturedPiece) {
+      console.log(currentPiece.value);
+      if (result.capturedPiece.color === "black") {
+        capturedBlack.value.push(result.capturedPiece);
+      } else {
+        capturedWhite.value.push(result.capturedPiece);
+      }
+    }
     // Clone pieces array to force Vue reactivity update
     const newPieces = pieces.value.map((row) => [...row]);
 
@@ -151,6 +227,44 @@ const onDrop = (event, row, col) => {
     draggingPiece = null;
   }
 };
+
+onMounted(() => {
+  const startingBoard = [
+    [
+      { color: "black", piece: 4 },
+      { color: "black", piece: 5 },
+      { color: "black", piece: 6 },
+      { color: "black", piece: 3 },
+      { color: "black", piece: 2 },
+      { color: "black", piece: 6 },
+      { color: "black", piece: 5 },
+      { color: "black", piece: 4 },
+    ],
+    Array.from({ length: 8 }, () => ({
+      color: "black",
+      piece: 1,
+    })),
+    Array(8).fill(null),
+    Array(8).fill(null),
+    Array(8).fill(null),
+    Array(8).fill(null),
+    Array.from({ length: 8 }, () => ({
+      color: "white",
+      piece: 1,
+    })),
+    [
+      { color: "white", piece: 4 },
+      { color: "white", piece: 5 },
+      { color: "white", piece: 6 },
+      { color: "white", piece: 3 },
+      { color: "white", piece: 2 },
+      { color: "white", piece: 6 },
+      { color: "white", piece: 5 },
+      { color: "white", piece: 4 },
+    ],
+  ];
+  chessRulesStore.initBoard(startingBoard);
+});
 </script>
 
 <style lang="less">
@@ -180,6 +294,10 @@ const onDrop = (event, row, col) => {
 
     &:hover {
       background-color: rgba(255, 255, 0, 0.5); // Highlight on hover
+    }
+
+    &.highlightCoordinates {
+      background-color: red;
     }
 
     .piece {

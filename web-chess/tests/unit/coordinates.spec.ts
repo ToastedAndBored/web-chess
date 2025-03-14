@@ -53,7 +53,7 @@ describe("possibleCoordinates", () => {
     chessStore.currentPiece = {
       row: 4,
       col: 4,
-      piece: PiecesEnum.horse,
+      piece: PiecesEnum.knight,
       color: "black",
     };
     possibleCoordinates();

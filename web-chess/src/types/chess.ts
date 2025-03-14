@@ -18,6 +18,6 @@ export enum PiecesEnum {
   king = 2,
   queen = 3,
   rook = 4,
-  horse = 5,
+  knight = 5,
   bishop = 6,
 }

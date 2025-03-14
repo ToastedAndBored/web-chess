@@ -34,6 +34,8 @@ export const useChessRulesStore = defineStore("chessRules", () => {
     turnOrder.value = value;
   }
 
+  const capturedWhite: IBoardPiece[] = reactive([]);
+  const capturedBlack: IBoardPiece[] = reactive([]);
   return {
     pieceArr,
     clearPieceArr,
@@ -46,5 +48,7 @@ export const useChessRulesStore = defineStore("chessRules", () => {
     clearPieceTurnOpt,
     turnOrder,
     setTurnOrder,
+    capturedBlack,
+    capturedWhite,
   };
 });
